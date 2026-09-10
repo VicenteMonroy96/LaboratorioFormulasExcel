@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#166534">
+  <title>Laboratorio de Fórmulas en Excel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          },
+          colors: {
+            excel: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .safe-top { padding-top: var(--sat); }
+    .safe-bottom { padding-bottom: var(--sab); }
+
+    /* Estilos dinámicos por plataforma */
+    body.is-ios {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", sans-serif;
+    }
+    body.is-android {
+      font-family: "Roboto", "Segoe UI", "Inter", sans-serif;
+    }
+
+    /* Animación y respuesta táctil para los botones */
+    .touch-btn {
+      touch-action: manipulation;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.08s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .touch-btn:active {
+      transform: scale(0.92);
+      filter: brightness(0.95);
+    }
+
+    .dropzone-active {
+      border-color: #16a34a !important;
+      background-color: #f0fdf4 !important;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25);
+    }
+
+    ::-webkit-scrollbar {
+      height: 4px;
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 font-sans h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col selection:bg-emerald-200 safe-top safe-bottom">
+
+  <!-- ENCABEZADO COMPACTO -->
+  <header class="bg-excel-800 text-white shadow-xs border-b border-excel-700 shrink-0 z-20">
+    <div class="w-full px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 min-w-0">
+        <div class="bg-white text-excel-800 font-black text-xs sm:text-sm w-6 h-6 sm:w-7 sm:h-7 rounded-md shadow-xs flex items-center justify-center select-none shrink-0">
+          fx
+        </div>
+        <div class="truncate">
+          <h1 class="text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 leading-none">
+            <span class="truncate">Fórmulas en Excel</span>
+            <span id="deviceBadge" class="text-[9px] bg-excel-600 text-emerald-100 font-semibold px-1.5 py-0.5 rounded uppercase shrink-0">Móvil</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-1.5 shrink-0">
+        <button id="soundToggleBtn" type="button" class="touch-btn flex items-center gap-1 text-[11px] bg-excel-900/80 hover:bg-excel-900 text-emerald-200 px-2 py-1 rounded-md border border-excel-700 transition">
+          <span id="soundIcon">🔊</span>
+        </button>
+        <button id="helpModalBtn" type="button" class="touch-btn text-[11px] bg-emerald-100 text-excel-900 hover:bg-white font-semibold px-2.5 py-1 rounded-md transition shadow-2xs flex items-center gap-0.5">
+          <span>Ayuda</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="flex-1 w-full p-2 sm:p-3 flex flex-col gap-1.5 sm:gap-2.5 min-h-0 overflow-hidden">
+
+    <!-- ZONA SUPERIOR: CONSTRUCCIÓN + RESULTADO GIGANTE -->
+    <section class="bg-white rounded-xl sm:rounded-2xl shadow-xs border border-slate-200 overflow-hidden shrink-0 flex flex-col">
+      
+      <!-- Fila 1: Celda activa, Barra fx y Botones rápidos de borrado -->
+      <div class="bg-slate-50 border-b border-slate-200 px-2 sm:px-3 py-1 flex items-center justify-between gap-1.5">
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="font-mono text-xs text-slate-700 bg-white border border-slate-300 px-1.5 py-0.5 rounded font-bold">
+            <strong class="text-excel-700">C2</strong>
+          </span>
+          <span class="text-xs font-mono text-slate-500 font-bold">fx</span>
+        </div>
+
+        <!-- Vista previa en texto plano -->
+        <div class="flex-1 bg-white border border-slate-200 rounded-md px-2 py-0.5 font-mono text-xs text-slate-800 overflow-x-auto whitespace-nowrap min-h-[28px] flex items-center shadow-inner" id="formulaBarMirror">
+          <span class="text-slate-400 italic text-[11px]">Toca botones abajo para crear la fórmula...</span>
+        </div>
+
+        <!-- Botones Borrar y Vaciar -->
+        <div class="flex items-center gap-1 shrink-0">
+          <button id="popTokenBtn" type="button" class="touch-btn text-xs text-slate-700 active:bg-slate-200 bg-slate-100 border border-slate-300 px-2 py-1 rounded font-semibold flex items-center gap-1">
+            ⌫ Borrar
+          </button>
+          <button id="clearFormulaBtn" type="button" class="touch-btn text-xs text-rose-700 active:bg-rose-100 bg-rose-50 border border-rose-200 px-2 py-1 rounded font-semibold">
+            Vaciar
+          </button>
+        </div>
+      </div>
+
+      <!-- Fila 2: Área de Fichas (Dropzone con scroll horizontal fluido) -->
+      <div class="px-2 py-1.5 bg-gradient-to-b from-white to-slate-50/60">
+        <div id="formulaDropZone" class="min-h-[46px] sm:min-h-[54px] max-h-[60px] overflow-x-auto overflow-y-hidden bg-slate-100/90 border border-dashed border-slate-300 rounded-lg px-2 py-1 flex items-center gap-1.5 whitespace-nowrap transition-all">
+          <div id="dropzonePlaceholder" class="w-full text-center py-1 text-slate-400 text-xs flex items-center justify-center gap-1 pointer-events-none select-none">
+            <span>Toca abajo los números o signos</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 3: RESULTADO GIGANTE ADAPTATIVO -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white px-3 py-1.5 sm:py-2 flex items-center justify-between border-t border-slate-200">
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span class="font-mono text-slate-400 text-sm sm:text-base font-bold shrink-0">C2 =</span>
+          <div id="cellDisplayValue" class="text-3xl sm:text-5xl md:text-6xl font-black font-mono tracking-tight text-emerald-400 truncate drop-shadow-sm transition-all leading-none">
+            <span class="text-slate-600 font-normal">—</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end shrink-0 pl-2">
+          <span id="resultTypeBadge" class="text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+            Vacío
+          </span>
+          <span id="calcStatusExplanation" class="text-[10px] sm:text-xs font-mono text-emerald-300 font-bold max-w-[150px] sm:max-w-xs text-right truncate">
+            Inicia con "="
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SELECTOR DE PESTAÑAS PARA MÓVILES (Evita amontonar botones en pantallas pequeñas) -->
+    <div class="flex md:hidden bg-slate-200/80 p-0.5 rounded-lg text-xs font-bold shrink-0 shadow-inner">
+      <button id="tabKeypadBtn" type="button" class="touch-btn flex-1 py-1.5 rounded-md text-center bg-white text-blue-700 shadow-xs font-bold transition">
+        🔢 Teclado 0-9
+      </button>
+      <button id="tabSymbolsBtn" type="button" class="touch-btn flex-1 py-1.5 rounded-md text-center text-slate-600 hover:text-slate-800 transition">
+        ➕ Símbolos fx
+      </button>
+      <button id="tabBothBtn" type="button" class="touch-btn flex-1 py-1.5 rounded-md text-center text-slate-600 hover:text-slate-800 transition">
+        ⚡ Ambos
+      </button>
+    </div>
+
+    <!-- PARTE INFERIOR: CAJA DE SÍMBOLOS Y TECLADO TELEFÓNICO -->
+    <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-2 items-stretch overflow-hidden" id="panelsWrapper">
+
+      <!-- Caja de Símbolos -->
+      <section id="symbolsSection" class="bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-xs border border-slate-200 flex flex-col justify-between overflow-hidden">
+        <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+          <h2 class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+            Caja de Símbolos
+          </h2>
+          <span class="text-[9px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded uppercase">
+            Operadores
+          </span>
+        </div>
+
+        <!-- Botones de símbolos interactivos (pulsación táctil optimizada) -->
+        <div class="grid grid-cols-4 sm:grid-cols-4 gap-1.5 sm:gap-2 my-auto py-1" id="symbolsContainer">
+          <!-- Inyectado con JavaScript -->
+        </div>
+
+        <div class="pt-1 border-t border-slate-100 text-[10px] text-slate-500 flex items-center gap-1">
+          <span class="w-3.5 h-3.5 rounded bg-emerald-600 text-white font-bold inline-flex items-center justify-center font-mono text-[9px] shrink-0">=</span>
+          <p class="truncate">Toda fórmula en Excel inicia obligatoriamente con <strong>=</strong></p>
+        </div>
+      </section>
+
+      <!-- Teclado Numérico Telefónico -->
+      <section id="keypadSection" class="bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-xs border border-slate-200 flex flex-col justify-between overflow-hidden">
+        <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+          <h2 class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+            Teclado Telefónico
+          </h2>
+          <span class="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded uppercase">
+            0 al 9
+          </span>
+        </div>
+
+        <!-- Distribución telefónica clásica (1-2-3 / 4-5-6 / 7-8-9 / ., 0, ⌫) -->
+        <div class="grid grid-cols-3 gap-1.5 sm:gap-2 my-auto py-1 max-w-[280px] mx-auto w-full" id="keypadContainer">
+          <!-- Inyectado con JavaScript -->
+        </div>
+
+        <div class="pt-1 border-t border-slate-100 text-[10px] text-slate-500 flex items-center justify-between">
+          <span>Toca para añadir</span>
+          <span class="font-mono text-slate-600 font-semibold">0-9 y .</span>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- MODAL DE AYUDA -->
+  <div id="guideModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 relative">
+      <button id="closeModalBtn" type="button" class="touch-btn absolute top-3 right-3 text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="w-8 h-8 rounded-lg bg-excel-100 text-excel-800 flex items-center justify-center font-black text-lg">
+          fx
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Guía Rápida de Excel</h3>
+          <p class="text-[11px] text-slate-500">Aprende tocando y experimentando</p>
+        </div>
+      </div>
+      <div class="text-xs text-slate-600 space-y-2">
+        <p>1. <strong>Regla del Igual (<code class="font-mono text-excel-700 font-bold">=</code>):</strong> Toda fórmula debe comenzar con el signo igual para que Excel calcule el resultado.</p>
+        <p>2. <strong>Toca o Arrastra:</strong> Puedes pulsar directamente los botones de números y símbolos para agregarlos de inmediato.</p>
+        <p>3. <strong>Operadores en Excel:</strong> Recuerda que la multiplicación es <code class="font-mono text-excel-700 font-bold">*</code> y la división es <code class="font-mono text-excel-700 font-bold">/</code>.</p>
+        <p>4. <strong>Eliminar:</strong> Toca el botón <strong>⌫</strong> para borrar la última ficha o pulsa la <strong>&times;</strong> en cualquier ficha para removerla.</p>
+      </div>
+      <div class="mt-4 flex justify-end">
+        <button id="confirmCloseModalBtn" type="button" class="touch-btn bg-excel-700 hover:bg-excel-800 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow">
+          ¡Entendido!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Estado reactivo global
+    const state = {
+      formulaTokens: [],
+      soundEnabled: true,
+      draggedItem: null,
+      device: 'desktop',
+      mobileTab: 'keypad'
+    };
+
+    // Sintetizador con Tone.js seguro ante restricciones de audio móvil
+    let synth = null;
+    function initAudio() {
+      try {
+        if (!synth && window.Tone) {
+          synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "triangle" },
+            envelope: { attack: 0.005, decay: 0.1, sustain: 0.01, release: 0.08 }
+          }).toDestination();
+          synth.volume.value = -12;
+        }
+      } catch (e) {
+        // Fallback silencioso
+      }
+    }
+
+    function playNote(note = "C5") {
+      if (!state.soundEnabled) return;
+      try {
+        initAudio();
+        if (synth && window.Tone) {
+          if (Tone.context.state === 'running') {
+            synth.triggerAttackRelease(note, "16n");
+          } else {
+            Tone.start().then(() => {
+              if (synth) synth.triggerAttackRelease(note, "16n");
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Vibración táctil para Android
+    function triggerHaptic() {
+      if (state.device === 'android' && navigator.vibrate) {
+        try { navigator.vibrate(12); } catch(e) {}
+      }
+    }
+
+    /**
+     * Agrega un nuevo token a la fórmula
+     */
+    function appendToken(value, type = 'operator') {
+      const token = {
+        id: 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        value: String(value),
+        type: type
+      };
+      state.formulaTokens.push(token);
+      renderDropZone();
+      evaluateFormula();
+
+      // Desplazamiento automático de la zona de fichas al final
+      const dropZone = document.getElementById('formulaDropZone');
+      if (dropZone) {
+        setTimeout(() => {
+          dropZone.scrollTo({ left: dropZone.scrollWidth, behavior: 'smooth' });
+        }, 10);
+      }
+    }
+
+    /**
+     * Elimina el último token ingresado (Backspace)
+     */
+    function popToken() {
+      if (state.formulaTokens.length > 0) {
+        state.formulaTokens.pop();
+        renderDropZone();
+        evaluateFormula();
+      }
+    }
+
+    /**
+     * Elimina un token específico por su ID único
+     */
+    function removeTokenById(id) {
+      state.formulaTokens = state.formulaTokens.filter(t => t.id !== id);
+      renderDropZone();
+      evaluateFormula();
+    }
+
+    /**
+     * Limpia completamente toda la fórmula
+     */
+    function clearTokens() {
+      state.formulaTokens = [];
+      renderDropZone();
+      evaluateFormula();
+    }
+
+    const symbolsData = [
+      { id: 'eq', symbol: '=', name: 'Igual', tip: 'Inicia toda fórmula', color: 'bg-emerald-600 text-white border-emerald-700 shadow-sm', type: 'operator' },
+      { id: 'add', symbol: '+', name: 'Suma', tip: 'Adición', color: 'bg-white text-slate-800 border-slate-200 shadow-2xs', type: 'operator' },
+      { id: 'sub', symbol: '-', name: 'Resta', tip: 'Sustracción', color: 'bg-white text-slate-800 border-slate-200 shadow-2xs', type: 'operator' },
+      { id: 'mul', symbol: '*', name: 'Por', tip: 'Multiplicación en Excel', color: 'bg-white text-slate-800 border-slate-200 shadow-2xs', type: 'operator' },
+      { id: 'div', symbol: '/', name: 'Entre', tip: 'División en Excel', color: 'bg-white text-slate-800 border-slate-200 shadow-2xs', type: 'operator' },
+      { id: 'lpar', symbol: '(', name: 'Abrir', tip: 'Prioridad', color: 'bg-white text-slate-800 border-slate-200 shadow-2xs', type: 'parenthesis' },
+      { id: 'rpar', symbol: ')', name: 'Cerrar', tip: 'Prioridad', color: 'bg-white text-slate-800 border-slate-200 shadow-2xs', type: 'parenthesis' }
+    ];
+
+    const keypadData = [
+      { val: '1', letters: '' },
+      { val: '2', letters: 'ABC' },
+      { val: '3', letters: 'DEF' },
+      { val: '4', letters: 'GHI' },
+      { val: '5', letters: 'JKL' },
+      { val: '6', letters: 'MNO' },
+      { val: '7', letters: 'PQRS' },
+      { val: '8', letters: 'TUV' },
+      { val: '9', letters: 'WXYZ' },
+      { val: '.', letters: '·' },
+      { val: '0', letters: '+' },
+      { val: 'DEL', letters: 'Borrar' }
+    ];
+
+    function renderSymbolsPalette() {
+      const container = document.getElementById('symbolsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      symbolsData.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `touch-btn select-none border rounded-xl p-2 sm:p-2.5 flex flex-col items-center justify-center text-center transition-all ${item.color} min-h-[48px]`;
+        btn.setAttribute('draggable', 'true');
+        btn.setAttribute('data-value', item.symbol);
+        btn.setAttribute('data-type', item.type);
+
+        btn.innerHTML = `
+          <span class="font-mono text-xl sm:text-2xl font-black leading-tight">${item.symbol}</span>
+          <span class="text-[9px] font-semibold tracking-tight leading-none opacity-80">${item.name}</span>
+        `;
+
+        // Arrastrar (Desktop)
+        btn.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', JSON.stringify({ value: item.symbol, type: item.type }));
+          state.draggedItem = { value: item.symbol, type: item.type };
+          playNote("F4");
+        });
+
+        btn.addEventListener('dragend', () => {
+          state.draggedItem = null;
+        });
+
+        // Pulsación directa (Móvil y Escritorio)
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          triggerHaptic();
+          appendToken(item.symbol, item.type);
+          playNote(item.symbol === '=' ? "C5" : "G4");
+        });
+
+        container.appendChild(btn);
+      });
+    }
+
+    function renderPhoneKeypad() {
+      const container = document.getElementById('keypadContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      keypadData.forEach(item => {
+        const isDelete = item.val === 'DEL';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+
+        if (isDelete) {
+          btn.className = 'touch-btn select-none bg-rose-50 active:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl p-2 flex flex-col items-center justify-center min-h-[48px] transition';
+          btn.innerHTML = `
+            <span class="text-base font-bold leading-none">⌫</span>
+            <span class="text-[8px] font-bold uppercase tracking-wider mt-0.5">Borrar</span>
+          `;
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerHaptic();
+            popToken();
+            playNote("E4");
+          });
+        } else {
+          btn.className = 'touch-btn select-none bg-white active:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center min-h-[48px] shadow-2xs transition';
+          btn.setAttribute('draggable', 'true');
+          btn.setAttribute('data-value', item.val);
+          btn.setAttribute('data-type', 'number');
+
+          btn.innerHTML = `
+            <span class="font-mono text-xl sm:text-2xl font-bold text-slate-900 leading-none">${item.val}</span>
+            <span class="text-[8px] font-semibold text-slate-400 tracking-wider leading-none mt-0.5 uppercase">${item.letters}</span>
+          `;
+
+          // Arrastrar (Desktop)
+          btn.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', JSON.stringify({ value: item.val, type: 'number' }));
+            state.draggedItem = { value: item.val, type: 'number' };
+            playNote("A4");
+          });
+
+          btn.addEventListener('dragend', () => {
+            state.draggedItem = null;
+          });
+
+          // Pulsación directa (Móvil y Escritorio)
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerHaptic();
+            appendToken(item.val, 'number');
+            playNote("B4");
+          });
+        }
+
+        container.appendChild(btn);
+      });
+    }
+
+    const dropZone = document.getElementById('formulaDropZone');
+
+    if (dropZone) {
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dropzone-active');
+      });
+
+      dropZone.addEventListener('dragleave', (e) => {
+        if (!dropZone.contains(e.relatedTarget)) {
+          dropZone.classList.remove('dropzone-active');
+        }
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dropzone-active');
+
+        try {
+          const rawData = e.dataTransfer.getData('text/plain');
+          if (rawData) {
+            const item = JSON.parse(rawData);
+            if (item && item.value) {
+              appendToken(item.value, item.type || 'operator');
+              playNote("E5");
+              return;
+            }
+          }
+        } catch(err) {}
+
+        if (state.draggedItem) {
+          appendToken(state.draggedItem.value, state.draggedItem.type);
+          playNote("E5");
+        }
+      });
+    }
+
+    function renderDropZone() {
+      const placeholder = document.getElementById('dropzonePlaceholder');
+      const mirror = document.getElementById('formulaBarMirror');
+      if (!dropZone) return;
+
+      Array.from(dropZone.children).forEach(child => {
+        if (child.id !== 'dropzonePlaceholder') {
+          dropZone.removeChild(child);
+        }
+      });
+
+      if (state.formulaTokens.length === 0) {
+        if (placeholder) {
+          placeholder.classList.remove('hidden');
+          placeholder.classList.add('flex');
+        }
+        if (mirror) {
+          mirror.innerHTML = `<span class="text-slate-400 italic select-none text-[11px]">Toca botones abajo para crear la fórmula...</span>`;
+        }
+      } else {
+        if (placeholder) {
+          placeholder.classList.add('hidden');
+          placeholder.classList.remove('flex');
+        }
+
+        const formulaString = state.formulaTokens.map(t => t.value).join(' ');
+        if (mirror) {
+          mirror.innerHTML = `<span class="font-mono font-bold text-slate-800 tracking-wide text-sm sm:text-base">${formulaString}</span>`;
+        }
+
+        state.formulaTokens.forEach((token, index) => {
+          const chip = document.createElement('div');
+          
+          let chipColor = 'bg-white border-slate-300 text-slate-800 shadow-2xs';
+          if (token.value === '=') chipColor = 'bg-emerald-600 border-emerald-700 text-white font-bold shadow-xs';
+          else if (['+', '-', '*', '/'].includes(token.value)) chipColor = 'bg-amber-50 border-amber-300 text-amber-900 font-bold';
+          else if (token.type === 'number') chipColor = 'bg-blue-50 border-blue-300 text-blue-900 font-bold';
+          else if (token.type === 'parenthesis') chipColor = 'bg-purple-50 border-purple-300 text-purple-900 font-bold';
+
+          chip.className = `inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg border text-sm sm:text-base font-mono transition shrink-0 select-none ${chipColor}`;
+          chip.setAttribute('draggable', 'true');
+          chip.setAttribute('data-index', index);
+
+          chip.innerHTML = `
+            <span class="font-bold">${token.value}</span>
+            <button type="button" class="touch-btn text-xs font-bold opacity-60 hover:opacity-100 hover:text-rose-600 transition ml-1 p-0.5" title="Eliminar">
+              &times;
+            </button>
+          `;
+
+          // Botón individual de borrado de ficha
+          const delBtn = chip.querySelector('button');
+          if (delBtn) {
+            delBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              triggerHaptic();
+              removeTokenById(token.id);
+              playNote("D4");
+            });
+          }
+
+          // Reordenar fichas por Drag & Drop
+          chip.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/reorder-index', index);
+          });
+
+          chip.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            chip.classList.add('ring-2', 'ring-emerald-500');
+          });
+
+          chip.addEventListener('dragleave', () => {
+            chip.classList.remove('ring-2', 'ring-emerald-500');
+          });
+
+          chip.addEventListener('drop', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            chip.classList.remove('ring-2', 'ring-emerald-500');
+            const sourceIndex = e.dataTransfer.getData('text/reorder-index');
+            if (sourceIndex !== '' && sourceIndex !== undefined) {
+              const from = parseInt(sourceIndex, 10);
+              const to = index;
+              if (from !== to && !isNaN(from)) {
+                const movedItem = state.formulaTokens.splice(from, 1)[0];
+                state.formulaTokens.splice(to, 0, movedItem);
+                renderDropZone();
+                evaluateFormula();
+                playNote("A5");
+              }
+            }
+          });
+
+          dropZone.appendChild(chip);
+        });
+      }
+    }
+
+    function evaluateFormula() {
+      const display = document.getElementById('cellDisplayValue');
+      const statusText = document.getElementById('calcStatusExplanation');
+      const badge = document.getElementById('resultTypeBadge');
+      if (!display || !statusText || !badge) return;
+
+      if (state.formulaTokens.length === 0) {
+        display.innerHTML = `<span class="text-slate-600 font-normal">—</span>`;
+        display.className = "text-3xl sm:text-5xl md:text-6xl font-black font-mono tracking-tight text-slate-500 transition-all leading-none";
+        statusText.innerText = "Inicia con \"=\"";
+        statusText.className = "text-[10px] sm:text-xs font-mono text-emerald-300 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+        badge.innerText = "Vacío";
+        badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700";
+        return;
+      }
+
+      const rawFormula = state.formulaTokens.map(t => t.value).join('');
+
+      // Regla de Oro: Si no empieza con '=' es texto plano
+      if (!rawFormula.startsWith('=')) {
+        display.innerText = rawFormula;
+        display.className = "text-2xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-amber-300 transition-all leading-none truncate";
+        statusText.innerText = "Falta '=' al inicio (es texto plano)";
+        statusText.className = "text-[10px] sm:text-xs font-mono text-amber-300 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+        badge.innerText = "Texto Plano";
+        badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-700";
+        return;
+      }
+
+      // Solo tiene '='
+      if (rawFormula === '=') {
+        display.innerHTML = `<span class="text-slate-500 font-mono font-light text-2xl sm:text-4xl">...</span>`;
+        display.className = "text-2xl sm:text-4xl font-black font-mono tracking-tight text-slate-500 transition-all leading-none";
+        statusText.innerText = "Agrega números y operadores";
+        statusText.className = "text-[10px] sm:text-xs font-mono text-emerald-400 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+        badge.innerText = "En Espera";
+        badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-emerald-300 border border-emerald-700";
+        return;
+      }
+
+      const expression = rawFormula.slice(1);
+
+      // Detección de división por cero
+      if (/\/0(?!\d)/.test(expression.replace(/\s+/g, ''))) {
+        display.innerText = "#¡DIV/0!";
+        display.className = "text-2xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-rose-400 transition-all leading-none";
+        statusText.innerText = "Error: división entre cero";
+        statusText.className = "text-[10px] sm:text-xs font-mono text-rose-400 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+        badge.innerText = "División / 0";
+        badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700";
+        return;
+      }
+
+      // Evaluación segura de la expresión matemática
+      try {
+        if (/[^0-9+\-*/().]/.test(expression)) {
+          throw new Error("Caracteres no válidos");
+        }
+
+        const result = Function(`"use strict"; return (${expression})`)();
+
+        if (result === undefined || isNaN(result)) {
+          throw new Error("Indeterminado");
+        }
+
+        if (!isFinite(result)) {
+          display.innerText = "#¡NUM!";
+          display.className = "text-2xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-rose-400 transition-all leading-none";
+          statusText.innerText = "Error: número fuera de rango";
+          statusText.className = "text-[10px] sm:text-xs font-mono text-rose-400 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+          badge.innerText = "Error Numérico";
+          badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700";
+        } else {
+          const formattedResult = Number.isInteger(result) ? result : parseFloat(result.toFixed(4));
+          display.innerText = formattedResult;
+          display.className = "text-3xl sm:text-5xl md:text-6xl font-black font-mono tracking-tight text-emerald-400 transition-all leading-none truncate";
+          statusText.innerText = "Fórmula válida";
+          statusText.className = "text-[10px] sm:text-xs font-mono text-emerald-300 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+          badge.innerText = "Cálculo Válido";
+          badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-600";
+        }
+      } catch (e) {
+        display.innerText = "#¡VALOR!";
+        display.className = "text-2xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-amber-400 transition-all leading-none";
+        statusText.innerText = "Sintaxis incompleta";
+        statusText.className = "text-[10px] sm:text-xs font-mono text-amber-300 font-bold max-w-[150px] sm:max-w-xs text-right truncate";
+        badge.innerText = "Incompleta";
+        badge.className = "text-[9px] uppercase font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700";
+      }
+    }
+
+    function setMobileTab(tab) {
+      state.mobileTab = tab;
+      const symbolsSec = document.getElementById('symbolsSection');
+      const keypadSec = document.getElementById('keypadSection');
+      const tabKeypad = document.getElementById('tabKeypadBtn');
+      const tabSymbols = document.getElementById('tabSymbolsBtn');
+      const tabBoth = document.getElementById('tabBothBtn');
+
+      if (!symbolsSec || !keypadSec) return;
+
+      // Restablecer estilos de pestañas
+      [tabKeypad, tabSymbols, tabBoth].forEach(btn => {
+        if (btn) {
+          btn.className = 'touch-btn flex-1 py-1.5 rounded-md text-center text-slate-600 hover:text-slate-800 font-medium transition';
+        }
+      });
+
+      if (window.innerWidth >= 768) {
+        symbolsSec.classList.remove('hidden');
+        keypadSec.classList.remove('hidden');
+        return;
+      }
+
+      if (tab === 'keypad') {
+        if (tabKeypad) tabKeypad.className = 'touch-btn flex-1 py-1.5 rounded-md text-center bg-white text-blue-700 shadow-xs font-bold transition';
+        keypadSec.classList.remove('hidden');
+        symbolsSec.classList.add('hidden');
+      } else if (tab === 'symbols') {
+        if (tabSymbols) tabSymbols.className = 'touch-btn flex-1 py-1.5 rounded-md text-center bg-white text-emerald-700 shadow-xs font-bold transition';
+        symbolsSec.classList.remove('hidden');
+        keypadSec.classList.add('hidden');
+      } else {
+        if (tabBoth) tabBoth.className = 'touch-btn flex-1 py-1.5 rounded-md text-center bg-white text-slate-800 shadow-xs font-bold transition';
+        symbolsSec.classList.remove('hidden');
+        keypadSec.classList.remove('hidden');
+      }
+    }
+
+    function detectDevice() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isAndroid = /android/i.test(ua);
+      const badge = document.getElementById('deviceBadge');
+
+      if (isIOS) {
+        state.device = 'ios';
+        document.body.classList.add('is-ios');
+        if (badge) {
+          badge.innerText = "iPhone";
+          badge.className = "text-[9px] bg-slate-700 text-slate-100 font-semibold px-1.5 py-0.5 rounded uppercase shrink-0";
+        }
+      } else if (isAndroid) {
+        state.device = 'android';
+        document.body.classList.add('is-android');
+        if (badge) {
+          badge.innerText = "Android";
+          badge.className = "text-[9px] bg-emerald-700 text-emerald-100 font-semibold px-1.5 py-0.5 rounded uppercase shrink-0";
+        }
+      } else {
+        state.device = 'desktop';
+        if (badge) badge.innerText = "PC / Web";
+      }
+
+      if (window.innerWidth < 768) {
+        setMobileTab('keypad');
+      }
+    }
+
+    // Inicialización del DOM
+    document.addEventListener('DOMContentLoaded', () => {
+      detectDevice();
+      renderSymbolsPalette();
+      renderPhoneKeypad();
+      renderDropZone();
+      evaluateFormula();
+
+      // Controladores de pestañas móviles
+      const tabKeypad = document.getElementById('tabKeypadBtn');
+      const tabSymbols = document.getElementById('tabSymbolsBtn');
+      const tabBoth = document.getElementById('tabBothBtn');
+
+      if (tabKeypad) tabKeypad.addEventListener('click', () => setMobileTab('keypad'));
+      if (tabSymbols) tabSymbols.addEventListener('click', () => setMobileTab('symbols'));
+      if (tabBoth) tabBoth.addEventListener('click', () => setMobileTab('both'));
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768) {
+          setMobileTab('both');
+        } else {
+          setMobileTab(state.mobileTab);
+        }
+      });
+
+      // Botón borrar última ficha
+      const popBtn = document.getElementById('popTokenBtn');
+      if (popBtn) {
+        popBtn.addEventListener('click', () => {
+          triggerHaptic();
+          popToken();
+          playNote("F4");
+        });
+      }
+
+      // Botón vaciar todo
+      const clearBtn = document.getElementById('clearFormulaBtn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          triggerHaptic();
+          clearTokens();
+          playNote("C4");
+        });
+      }
+
+      // Botón alternar sonido
+      const soundBtn = document.getElementById('soundToggleBtn');
+      if (soundBtn) {
+        soundBtn.addEventListener('click', () => {
+          state.soundEnabled = !state.soundEnabled;
+          const icon = document.getElementById('soundIcon');
+          if (icon) icon.innerText = state.soundEnabled ? "🔊" : "🔇";
+          if (state.soundEnabled) playNote("E5");
+        });
+      }
+
+      // Modal de ayuda
+      const guideModal = document.getElementById('guideModal');
+      const helpBtn = document.getElementById('helpModalBtn');
+      const closeBtn = document.getElementById('closeModalBtn');
+      const confirmBtn = document.getElementById('confirmCloseModalBtn');
+
+      if (helpBtn && guideModal) {
+        helpBtn.addEventListener('click', () => {
+          guideModal.classList.remove('hidden');
+          guideModal.classList.add('flex');
+          playNote("D5");
+        });
+      }
+
+      const closeModal = () => {
+        if (guideModal) {
+          guideModal.classList.add('hidden');
+          guideModal.classList.remove('flex');
+        }
+      };
+
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+      if (confirmBtn) confirmBtn.addEventListener('click', closeModal);
+      if (guideModal) {
+        guideModal.addEventListener('click', (e) => {
+          if (e.target === guideModal) closeModal();
+        });
+      }
+    });
+  </script>
+</body>
+</html>
